@@ -32,6 +32,10 @@ body{font-family:"Microsoft JhengHei","Noto Sans TC","Segoe UI",sans-serif;backg
 .chip em{font-style:normal;font-weight:400;color:#888;margin-left:2px;font-size:9px}
 .est{font-size:11px;color:#555;white-space:nowrap}
 .zero td{color:#ccc}
+.badge-ok{display:inline-block;background:#27ae60;color:#fff;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600}
+.badge-wait{display:inline-block;background:#e67e22;color:#fff;border-radius:4px;padding:2px 8px;font-size:10px}
+.erp-no{font-family:monospace;font-size:11px;font-weight:700;color:#2c3e50;margin-left:4px}
+.done-row{background:#f0faf0}
 /* receipt panel */
 .panel{display:none;background:#fff;border:1px solid #ddd;border-radius:8px;margin:4px 0 8px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .panel.open{display:block}
@@ -68,13 +72,30 @@ body{font-family:"Microsoft JhengHei","Noto Sans TC","Segoe UI",sans-serif;backg
   <table class="tbl">
     <thead><tr>
       <th>#</th><th>對帳區間</th><th class="r">銷帳總額</th><th class="r">手續費</th>
-      <th>預估到帳</th><th>訂單組成</th><th></th>
+      <th>預估到帳</th><th>狀態</th><th>訂單組成</th><th></th>
     </tr></thead>
     <tbody id="tb"></tbody>
   </table>
 </div>
 <script>
 // ═══ 內建歷史資料 ═══
+// ═══ ERP 收款單對照（從 ECOUNT 掃描 + 使用者確認）═══
+const ERP_MAP={
+  "2026/02/09 ~ 2026/02/15":"2026/03/03 -4",
+  "2026/02/23 ~ 2026/03/01":"2026/03/10 -14",
+  "2026/03/02 ~ 2026/03/08":"2026/03/17 -4",
+  "2026/03/09 ~ 2026/03/15":"2026/03/24 -8",
+  "2026/03/16 ~ 2026/03/22":"2026/03/31 -25",
+  "2026/03/23 ~ 2026/03/29":"2026/04/07 -21",
+  "2026/03/30 ~ 2026/04/05":"2026/04/14 -11",
+  "2026/04/06 ~ 2026/04/12":"2026/04/21 -4",
+  "2026/04/13 ~ 2026/04/19":"2026/04/28 -9",
+  "2026/04/20 ~ 2026/04/26":"2026/05/05 -4",
+  "2026/04/27 ~ 2026/05/03":"2026/05/12 -18",
+  "2026/05/04 ~ 2026/05/10":"2026/05/19 -4",
+  "2026/05/11 ~ 2026/05/17":"2026/05/26 -11",
+  "2026/05/18 ~ 2026/05/24":"2026/06/02 -1",
+};
 const SEED=[{"period":"2025/12/22 ~ 2025/12/28","start":"2025-12-22","end":"2025-12-28","total":26917,"fee":503,"orders":[{"no":"CB2362","amt":500},{"no":"CB2396","amt":500},{"no":"CB2397","amt":2740},{"no":"CB2399","amt":6900},{"no":"CB2400","amt":8242},{"no":"CB2401","amt":2275},{"no":"CB2402","amt":5760}]},{"period":"2025/12/29 ~ 2026/01/04","start":"2025-12-29","end":"2026-01-04","total":60014,"fee":1200,"orders":[{"no":"CB2405","amt":8800},{"no":"CB2408","amt":500},{"no":"CB2410","amt":5892},{"no":"CB2412","amt":6312},{"no":"CB2413","amt":9290},{"no":"CB2414","amt":500},{"no":"CB2415","amt":28720}]},{"period":"2026/01/05 ~ 2026/01/11","start":"2026-01-05","end":"2026-01-11","total":41650,"fee":828,"orders":[{"no":"CB2422","amt":2050},{"no":"CB2423","amt":5524},{"no":"CB2424","amt":6504},{"no":"CB2425","amt":1872},{"no":"CB2426","amt":22240},{"no":"CB2429","amt":500},{"no":"CB2430","amt":2960}]},{"period":"2026/01/12 ~ 2026/01/18","start":"2026-01-12","end":"2026-01-18","total":151411,"fee":4624,"orders":[{"no":"CB2326","amt":5000},{"no":"CB2431","amt":26672},{"no":"CB2433","amt":12960},{"no":"CB2435","amt":5300},{"no":"CB2437","amt":500},{"no":"CB2440","amt":2200},{"no":"CB2445","amt":93867},{"no":"CB2446","amt":4912}]},{"period":"2026/01/19 ~ 2026/01/25","start":"2026-01-19","end":"2026-01-25","total":51434,"fee":1029,"orders":[{"no":"CB2447","amt":13660},{"no":"CB2448","amt":4630},{"no":"CB2450","amt":6480},{"no":"CB2452","amt":2960},{"no":"CB2453","amt":23704}]},{"period":"2026/01/26 ~ 2026/02/01","start":"2026-01-26","end":"2026-02-01","total":8174,"fee":115,"orders":[{"no":"CB2455","amt":4824},{"no":"CB2461","amt":3350}]},{"period":"2026/02/02 ~ 2026/02/08","start":"2026-02-02","end":"2026-02-08","total":92509,"fee":1572,"orders":[{"no":"CB2451","amt":8550},{"no":"CB2456","amt":15030},{"no":"CB2460","amt":2000},{"no":"CB2466","amt":38880},{"no":"CB2467","amt":1270},{"no":"CB2468","amt":4539},{"no":"CB2469","amt":22240}]},{"period":"2026/02/09 ~ 2026/02/15","start":"2026-02-09","end":"2026-02-15","total":16000,"fee":292,"orders":[{"no":"CB2472","amt":13660},{"no":"CB2474","amt":2340}]},{"period":"2026/02/16 ~ 2026/02/22","start":"2026-02-16","end":"2026-02-22","total":0,"fee":0,"orders":[]},{"period":"2026/02/23 ~ 2026/03/01","start":"2026-02-23","end":"2026-03-01","total":53520,"fee":1070,"orders":[{"no":"CB2476","amt":2880},{"no":"CB2484","amt":5640},{"no":"CB2488","amt":45000}]},{"period":"2026/03/02 ~ 2026/03/08","start":"2026-03-02","end":"2026-03-08","total":61970,"fee":343,"orders":[{"no":"CB2486","amt":31500},{"no":"CB2490","amt":3900},{"no":"CB2491","amt":6480},{"no":"CB2493","amt":8170},{"no":"CB2494","amt":2450},{"no":"CB2495","amt":7350},{"no":"CB2496","amt":2120}]},{"period":"2026/03/09 ~ 2026/03/15","start":"2026-03-09","end":"2026-03-15","total":20178,"fee":404,"orders":[{"no":"CB2499","amt":1000},{"no":"CB2500","amt":368},{"no":"CB2504","amt":150},{"no":"CB2505","amt":16340},{"no":"CB2507","amt":2320}]},{"period":"2026/03/16 ~ 2026/03/22","start":"2026-03-16","end":"2026-03-22","total":30800,"fee":464,"orders":[{"no":"CB2510","amt":2750},{"no":"CB2512","amt":4912},{"no":"CB2513","amt":700},{"no":"CB2515","amt":6730},{"no":"CB2518","amt":15708}]},{"period":"2026/03/23 ~ 2026/03/29","start":"2026-03-23","end":"2026-03-29","total":89053,"fee":2419,"orders":[{"no":"CB2519","amt":39152},{"no":"CB2520","amt":19120},{"no":"CB2521","amt":2340},{"no":"CB2522","amt":18495},{"no":"CB2528","amt":7840},{"no":"CB2532","amt":2106}]},{"period":"2026/03/30 ~ 2026/04/05","start":"2026-03-30","end":"2026-04-05","total":9794,"fee":148,"orders":[{"no":"CB2534","amt":3350},{"no":"CB2536","amt":2000},{"no":"CB2537","amt":4444}]},{"period":"2026/04/06 ~ 2026/04/12","start":"2026-04-06","end":"2026-04-12","total":27180,"fee":544,"orders":[{"no":"CB2542","amt":1000},{"no":"CB2551","amt":26180}]},{"period":"2026/04/13 ~ 2026/04/19","start":"2026-04-13","end":"2026-04-19","total":4360,"fee":87,"orders":[{"no":"CB2548","amt":4360}]},{"period":"2026/04/20 ~ 2026/04/26","start":"2026-04-20","end":"2026-04-26","total":81253,"fee":1378,"orders":[{"no":"CB2556","amt":13320},{"no":"CB2559","amt":990},{"no":"CB2560","amt":990},{"no":"CB2563","amt":52403},{"no":"CB2564","amt":6370},{"no":"CB2565","amt":7180}]},{"period":"2026/04/27 ~ 2026/05/03","start":"2026-04-27","end":"2026-05-03","total":19170,"fee":378,"orders":[{"no":"CB2530","amt":8970},{"no":"CB2531","amt":9700},{"no":"CB2569","amt":500}]},{"period":"2026/05/04 ~ 2026/05/10","start":"2026-05-04","end":"2026-05-10","total":20900,"fee":140,"orders":[{"no":"CB2574","amt":14360},{"no":"CB2577","amt":4560},{"no":"CB2578","amt":990},{"no":"CB2580","amt":990}]},{"period":"2026/05/11 ~ 2026/05/17","start":"2026-05-11","end":"2026-05-17","total":2340,"fee":47,"orders":[{"no":"CB2583","amt":1070},{"no":"CB2584","amt":1270}]},{"period":"2026/05/18 ~ 2026/05/24","start":"2026-05-18","end":"2026-05-24","total":21222,"fee":424,"orders":[{"no":"CB2585","amt":4212},{"no":"CB2589","amt":2510},{"no":"CB2595","amt":3000},{"no":"CB2596","amt":3000},{"no":"CB2600","amt":3000},{"no":"CB2602","amt":5500}]}];
 
 let weeks = [];
@@ -146,28 +167,41 @@ function render(){
   const active=weeks.filter(w=>w.total>0);
   const grand=weeks.reduce((s,w)=>s+w.total,0);
   const nOrders=weeks.reduce((s,w)=>s+w.orders.length,0);
-  document.getElementById('stats').innerHTML=`${weeks.length} 週 / <b>${nOrders}</b> 筆 / 銷帳 <b>${grand.toLocaleString()}</b>`;
+  const dc=weeks.filter(w=>w.total>0&&ERP_MAP[w.period]).length;
+  const pc=weeks.filter(w=>w.total>0&&!ERP_MAP[w.period]).length;
+  document.getElementById('stats').innerHTML=`${weeks.length} 週 / <b>${nOrders}</b> 筆 / 銷帳 <b>${grand.toLocaleString()}</b> / <span style="color:#27ae60">${dc} 已入帳</span> / <span style="color:#e74c3c">${pc} 待處理</span>`;
 
   let html='';
   weeks.forEach((w,i)=>{
     const est=remitDate(w.end);
     if(!w.total){
-      html+=`<tr class="zero"><td>${i+1}</td><td>${w.period}</td><td class="r">0</td><td class="r">0</td><td>-</td><td>-</td><td></td></tr>`;
+      html+=`<tr class="zero"><td>${i+1}</td><td>${w.period}</td><td class="r">0</td><td class="r">0</td><td>-</td><td><span class="badge-ok">無單</span></td><td>-</td><td></td></tr>`;
       return;
     }
+    const erpNo=ERP_MAP[w.period]||'';
+    const isDone=!!erpNo;
+    const statusHtml=isDone
+      ?`<span class="badge-ok">已入帳</span><span class="erp-no">${erpNo}</span>`
+      :`<span class="badge-wait">待處理</span>`;
+    const actionHtml=isDone
+      ?''
+      :`<button class="btn-sm btn-copy" onclick="toggle(${i})" style="background:#34495e">收款單</button>`;
     const chips=w.orders.map(o=>`<span class="chip">${o.no}<em>${o.amt.toLocaleString()}</em></span>`).join(' ');
-    html+=`<tr>
+    html+=`<tr class="${isDone?'done-row':''}">
       <td>${i+1}</td>
       <td style="font-weight:600;white-space:nowrap">${w.period}</td>
       <td class="r amt">${w.total.toLocaleString()}</td>
       <td class="r" style="color:#e67e22">${w.fee.toLocaleString()}</td>
       <td class="est">${est}</td>
+      <td>${statusHtml}</td>
       <td>${chips}</td>
-      <td><button class="btn-sm btn-copy" onclick="toggle(${i})" style="background:#34495e">收款單</button></td>
+      <td>${actionHtml}</td>
     </tr>
-    <tr><td colspan="7" style="padding:0"><div class="panel" id="p${i}">${receiptPanel(w)}</div></td></tr>`;
+    ${isDone?'':`<tr><td colspan="8" style="padding:0"><div class="panel" id="p${i}">${receiptPanel(w)}</div></td></tr>`}`;
   });
-  html+=`<tr class="foot"><td></td><td>合計</td><td class="r amt">${grand.toLocaleString()}</td><td class="r" style="color:#e67e22">${weeks.reduce((s,w)=>s+w.fee,0).toLocaleString()}</td><td></td><td>${nOrders} 筆</td><td></td></tr>`;
+  const doneCount=weeks.filter(w=>w.total>0&&ERP_MAP[w.period]).length;
+  const pendCount=weeks.filter(w=>w.total>0&&!ERP_MAP[w.period]).length;
+  html+=`<tr class="foot"><td></td><td>合計</td><td class="r amt">${grand.toLocaleString()}</td><td class="r" style="color:#e67e22">${weeks.reduce((s,w)=>s+w.fee,0).toLocaleString()}</td><td></td><td>${doneCount} 已入 / ${pendCount} 待處理</td><td>${nOrders} 筆</td><td></td></tr>`;
   document.getElementById('tb').innerHTML=html;
 }
 
